@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>El Maghraby Programming  - Cloud Code Vault</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Firebase SDK (v8) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Tajawal:wght@400;500;700;800&display=swap');
+        body { font-family: 'Tajawal', sans-serif; background-color: #020617; color: #f8fafc; min-height: 100vh; overflow-y: scroll; }
+        code, textarea, pre { font-family: 'Fira Code', monospace; }
+        
+        .glass { 
+            background: rgba(15, 23, 42, 0.85); 
+            backdrop-filter: blur(16px); 
+            border: 1px solid rgba(56, 189, 248, 0.15); 
+        }
+
+        .avatar-glow {
+            position: relative;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #06b6d4, #3b82f6, #8b5cf6);
+            padding: 2px;
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.5), 0 0 30px rgba(59, 130, 246, 0.3);
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-cyan-500 selection:text-slate-900">
+
+    <!-- Auth Modal -->
+    <div id="authModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-lg overflow-y-auto">
+        <div class="glass w-full max-w-md p-6 my-auto rounded-3xl shadow-2xl text-center border border-slate-800">
+            
+            <div class="avatar-glow w-24 h-24 mx-auto mb-4">
+                <img src="https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=200" alt="Profile" class="w-full h-full object-cover rounded-full bg-slate-900">
+            </div>
+
+            <h2 class="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 mb-0.5">El Maghraby Programming</h2>
+            <p class="text-xs text-slate-400 mb-6 font-mono tracking-wider">Cloud Code Vault v2.6</p>
+
+            <!-- Login Form -->
+            <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4 text-right">
+                <p class="text-xs text-cyan-400 font-medium text-center mb-2"><i class="fa-solid fa-right-to-bracket ml-1"></i> تسجيل الدخول للخزنة</p>
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">الاسم الثلاثي</label>
+                    <input type="text" id="loginNameInput" required placeholder="أدخل اسمك الثلاثي" class="w-full bg-slate-900/80 border border-slate-700/80 rounded-xl px-4 py-2.5 text-slate-100 text-sm focus:outline-none focus:border-cyan-500 transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">كلمة المرور</label>
+                    <div class="relative">
+                        <input type="password" id="passInput" required placeholder="••••••••" class="w-full bg-slate-900/80 border border-slate-700/80 rounded-xl pl-10 pr-4 py-2.5 text-slate-100 text-sm focus:outline-none focus:border-cyan-500 transition">
+                        <button type="button" onclick="togglePasswordVisibility('passInput', 'togglePassIcon1')" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-cyan-400 text-sm">
+                            <i id="togglePassIcon1" class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center text-xs">
+                    <button type="button" onclick="switchAuthView('forgot')" class="text-slate-400 hover:text-cyan-400 transition">نسيت كلمة السر؟</button>
+                </div>
+
+                <div id="loginError" class="text-rose-400 text-xs hidden text-center bg-rose-500/10 py-2 rounded-xl border border-rose-500/20"></div>
+                <button type="submit" id="loginBtn" class="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 text-white font-bold text-sm shadow-lg shadow-cyan-500/20 hover:opacity-95 transition active:scale-[0.98]">تسجيل الدخول للخزنة السحابية</button>
+                <div class="pt-2 text-center">
+                    <button type="button" onclick="switchAuthView('setup')" class="text-xs text-cyan-400 hover:underline"><i class="fa-solid fa-user-plus ml-1"></i> إنشاء حساب سحابي جديد</button>
+                </div>
+            </form>
+
+            <!-- Setup Form -->
+            <form id="setupForm" onsubmit="handleSetup(event)" class="space-y-3.5 text-right hidden">
+                <p class="text-xs text-cyan-400 font-medium text-center mb-1"><i class="fa-solid fa-user-plus ml-1"></i> إنشاء حساب سحابي جديد</p>
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">الاسم الثلاثي</label>
+                    <input type="text" id="setupFullNameInput" required placeholder="مثال: الاسم ثلاثي عربي او انجليزي" class="w-full bg-slate-900/80 border border-slate-700/80 rounded-xl px-4 py-2.5 text-slate-100 text-sm focus:outline-none focus:border-cyan-500 transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">كلمة المرور الجديدة</label>
+                    <div class="relative">
+                        <input type="password" id="setupPassInput" required placeholder="••••••••" class="w-full bg-slate-900/80 border border-slate-700/80 rounded-xl pl-10 pr-4 py-2.5 text-slate-100 text-sm focus:outline-none focus:border-cyan-500 transition">
+                        <button type="button" onclick="togglePasswordVisibility('setupPassInput', 'togglePassIcon2')" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-cyan-400 text-sm">
+                            <i id="togglePassIcon2" class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">تأكيد كلمة المرور</label>
+                    <div class="relative">
+                        <input type="password" id="setupPassConfirmInput" required placeholder="••••••••" class="w-full bg-slate-900/80 border border-slate-700/80 rounded-xl pl-10 pr-4 py-2.5 text-slate-100 text-sm focus:outline-none focus:border-cyan-500 transition">
+                        <button type="button" onclick="togglePasswordVisibility('setupPassConfirmInput', 'togglePassIcon3')" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-cyan-400 text-sm">
+                            <i id="togglePassIcon3" class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                <div id="setupError" class="text-rose-400 text-xs hidden text-center bg-rose-500/10 py-2 rounded-xl border border-rose-500/20"></div>
+                <button type="submit" id="setupBtn" class="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 text-white font-bold text-sm shadow-lg shadow-cyan-500/20 hover:opacity-95 transition active:scale-[0.98]">حفظ وإنشاء الحساب</button>
+                <div class="pt-1 text-center">
+                    <button type="button" onclick="switchAuthView('login')" class="text-xs text-slate-400 hover:text-white transition">العودة لتسجيل الدخول</button>
+                </div>
+            </form>
+
+            <!-- Forgot Password Form -->
+            <form id="forgotForm" onsubmit="handleResetPassword(event)" class="space-y-3.5 text-right hidden">
+                <p class="text-xs text-amber-400 font-medium text-center mb-1"><i class="fa-solid fa-key ml-1"></i> استعادة كلمة المرور</p>
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">أدخل الاسم الثلاثي المسجل به</label>
+                    <input type="text" id="forgotNameInput" required placeholder="مثال: اسم الاميل الحالي " class="w-full bg-slate-900/80 border border-slate-700/80 rounded-xl px-4 py-2.5 text-slate-100 text-sm focus:outline-none focus:border-cyan-500 transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">كلمة المرور الجديدة</label>
+                    <div class="relative">
+                        <input type="password" id="forgotNewPassInput" required placeholder="أدخل كلمة مرور قوية" class="w-full bg-slate-900/80 border border-slate-700/80 rounded-xl pl-10 pr-4 py-2.5 text-slate-100 text-sm focus:outline-none focus:border-cyan-500 transition">
+                        <button type="button" onclick="togglePasswordVisibility('forgotNewPassInput', 'togglePassIcon4')" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-cyan-400 text-sm">
+                            <i id="togglePassIcon4" class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                <div id="forgotError" class="text-rose-400 text-xs hidden text-center bg-rose-500/10 py-2 rounded-xl border border-rose-500/20"></div>
+                <button type="submit" id="forgotBtn" class="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold text-sm shadow-lg shadow-amber-500/20 hover:opacity-95 transition active:scale-[0.98]">تحديث كلمة المرور</button>
+                <div class="pt-1 text-center">
+                    <button type="button" onclick="switchAuthView('login')" class="text-xs text-slate-400 hover:text-white transition">العودة لتسجيل الدخول</button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+
+    <!-- App Main Content -->
+    <div id="appContent" class="hidden flex-1 flex flex-col">
+        <header class="glass sticky top-0 z-40 px-6 py-4 border-b border-slate-800 flex justify-between items-center shadow-xl">
+            <div class="flex items-center gap-3">
+                <div class="avatar-glow w-9 h-9">
+                    <img src="https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=200" alt="Logo" class="w-full h-full object-cover rounded-full bg-slate-900">
+                </div>
+                <span class="font-bold text-sm tracking-wide text-slate-100">El Maghraby Vault</span>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2 bg-slate-900/80 px-3 py-1.5 rounded-full border border-slate-800">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span id="headerUserName" class="text-xs font-semibold text-slate-200"></span>
+                </div>
+                <button onclick="logout()" title="تسجيل الخروج" class="w-8 h-8 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:bg-rose-500 hover:text-white transition flex items-center justify-center">
+                    <i class="fa-solid fa-right-from-bracket text-xs"></i>
+                </button>
+            </div>
+        </header>
+
+        <main class="p-4 md:p-6 max-w-5xl mx-auto w-full flex-1">
+            <div class="flex flex-col sm:flex-row justify-between items-center gap-3 mb-6">
+                <div class="relative w-full sm:max-w-xs">
+                    <input type="text" id="searchInput" oninput="renderSnippets()" placeholder="بحث في الخزنة..." class="bg-slate-900/80 border border-slate-800 rounded-xl pl-9 pr-4 py-2.5 text-xs w-full focus:outline-none focus:border-cyan-500 transition">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+                </div>
+                <button onclick="toggleForm()" class="w-full sm:w-auto bg-gradient-to-r from-cyan-500 to-blue-600 hover:opacity-90 text-slate-950 font-black px-4 py-2.5 rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/10 transition active:scale-95">
+                    <i class="fa-solid fa-plus"></i> إضافة كود جديد
+                </button>
+            </div>
+
+            <!-- Add Code Form Modal -->
+            <div id="codeForm" class="hidden glass p-5 rounded-2xl mb-6 border border-slate-800 shadow-2xl">
+                <form id="snippetForm" onsubmit="saveSnippet(event)" class="space-y-3.5">
+                    <input type="text" id="title" required placeholder="عنوان الكود" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:border-cyan-500">
+                    
+                    <select id="language" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:border-cyan-500">
+                        <option value="javascript">JavaScript</option>
+                        <option value="html">HTML</option>
+                        <option value="css">CSS</option>
+                        <option value="python">Python</option>
+                        <option value="cpp">C++</option>
+                        <option value="c">C</option>
+                        <option value="java">Java</option>
+                        <option value="csharp">C#</option>
+                        <option value="php">PHP</option>
+                        <option value="sql">SQL</option>
+                        <option value="typescript">TypeScript</option>
+                        <option value="bash">Bash / Shell</option>
+                    </select>
+
+                    <!-- مرفق صورة عادي -->
+                    <div class="border border-dashed border-slate-700 bg-slate-950/50 p-3 rounded-xl text-center">
+                        <label class="block text-xs text-slate-300 cursor-pointer hover:underline font-bold">
+                            <i class="fa-solid fa-image ml-1 text-cyan-400"></i> إرفاق صورة مع الكود (اختياري)
+                            <input type="file" id="attachImageInput" accept="image/*" onchange="handleImageSelect(event)" class="hidden">
+                        </label>
+                        <div id="attachedImagePreview" class="hidden text-xs text-emerald-400 mt-2">
+                            <i class="fa-solid fa-circle-check"></i> تم اختيار الصورة بنجاح
+                        </div>
+                    </div>
+
+                    <textarea id="codeText" required rows="6" placeholder="// اكتب أو ألصق الكود هنا..." class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3.5 text-xs dir-ltr focus:outline-none focus:border-cyan-500"></textarea>
+                    
+                    <div class="flex gap-2 justify-end">
+                        <button type="button" onclick="toggleForm()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-xl text-xs font-medium transition">إلغاء</button>
+                        <button type="submit" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-5 py-2 rounded-xl text-xs transition">حفظ الكود</button>
+                    </div>
+                </form>
+            </div>
+
+            <div id="snippetsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4 min-h-[250px]"></div>
+        </main>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md hidden">
+        <div class="glass w-full max-w-sm p-6 rounded-2xl border border-slate-800 text-center space-y-4">
+            <div class="w-12 h-12 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-full flex items-center justify-center mx-auto text-lg">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h3 class="font-bold text-sm text-slate-100">تأكيد الحذف</h3>
+            <p class="text-xs text-slate-400">هل أنت متأكد من رغبتك في حذف هذا الكود نهائياً من الخزنة؟</p>
+            <div class="flex gap-2 justify-center pt-2">
+                <button onclick="closeDeleteModal()" class="w-1/2 py-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-medium transition">إلغاء</button>
+                <button id="confirmDeleteBtn" onclick="confirmDeleteAction()" class="w-1/2 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition">نعم، احذف</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // إعدادات Firebase
+        const firebaseConfig = {
+            databaseURL: "https://coffee-spark-ai-barista-6f233-default-rtdb.firebaseio.com"
+        };
+
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.database();
+
+        let attachedImageData = null;
+        let snippetToDeleteId = null;
+        let isListening = false;
+        let currentSnippetsList = [];
+        let previousRenderState = ""; 
+
+        function togglePasswordVisibility(inputId, iconId) {
+            const input = document.getElementById(inputId);
+            const icon = document.getElementById(iconId);
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
+
+        function sanitizeUserName(name) {
+            if (!name) return 'anonymous';
+            return encodeURIComponent(name.trim().toLowerCase()).replace(/%/g, '_');
+        }
+
+        function getCurrentUser() {
+            return localStorage.getItem('km_current_user');
+        }
+
+        function switchAuthView(view) {
+            document.getElementById('loginError').classList.add('hidden');
+            document.getElementById('setupError').classList.add('hidden');
+            document.getElementById('forgotError').classList.add('hidden');
+            
+            document.getElementById('loginForm').classList.add('hidden');
+            document.getElementById('setupForm').classList.add('hidden');
+            document.getElementById('forgotForm').classList.add('hidden');
+
+            if (view === 'setup') {
+                document.getElementById('setupForm').classList.remove('hidden');
+            } else if (view === 'forgot') {
+                document.getElementById('forgotForm').classList.remove('hidden');
+            } else {
+                document.getElementById('loginForm').classList.remove('hidden');
+            }
+        }
+
+        function handleImageSelect(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                attachedImageData = evt.target.result;
+                document.getElementById('attachedImagePreview').classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function handleSetup(e) {
+            e.preventDefault();
+            const fullName = document.getElementById('setupFullNameInput').value.trim();
+            const pass = document.getElementById('setupPassInput').value.trim();
+            const passConfirm = document.getElementById('setupPassConfirmInput').value.trim();
+            const err = document.getElementById('setupError');
+            const setupBtn = document.getElementById('setupBtn');
+
+            err.classList.add('hidden');
+
+            if (fullName.split(/\s+/).length < 3) {
+                err.innerText = "يرجى كتابة الاسم الثلاثي كاملاً!";
+                err.classList.remove('hidden');
+                return;
+            }
+
+            if (pass !== passConfirm) {
+                err.innerText = "كلمتا المرور غير متطابقتين!";
+                err.classList.remove('hidden');
+                return;
+            }
+
+            setupBtn.disabled = true;
+            setupBtn.innerHTML = `<i class="fa-solid fa-spinner animate-spin ml-1"></i> جاري الحفظ...`;
+
+            const userKey = sanitizeUserName(fullName);
+            const userRef = db.ref('users/' + userKey);
+
+            try {
+                const snapshot = await userRef.once('value');
+                const userData = snapshot.val();
+                
+                // التأكد الصحيح من عدم وجود الحساب مسبقاً
+                if (snapshot.exists() && userData && userData.password) {
+                    err.innerText = "هذا الحساب موجود بالفعل! يمكنك تسجيل الدخول مباشرة.";
+                    err.classList.remove('hidden');
+                    return;
+                }
+
+                await userRef.set({
+                    fullName: fullName,
+                    password: pass,
+                    createdAt: new Date().toISOString()
+                });
+
+                alert('تم إنشاء الحساب سحابياً بنجاح!');
+                document.getElementById('setupForm').reset();
+                switchAuthView('login');
+                document.getElementById('loginNameInput').value = fullName;
+
+            } catch (error) {
+                err.innerText = "خطأ بالاتصال بالسحابة!";
+                err.classList.remove('hidden');
+            } finally {
+                setupBtn.disabled = false;
+                setupBtn.innerHTML = "حفظ وإنشاء الحساب";
+            }
+        }
+
+        async function handleResetPassword(e) {
+            e.preventDefault();
+            const fullName = document.getElementById('forgotNameInput').value.trim();
+            const newPass = document.getElementById('forgotNewPassInput').value.trim();
+            const err = document.getElementById('forgotError');
+            const forgotBtn = document.getElementById('forgotBtn');
+
+            err.classList.add('hidden');
+            forgotBtn.disabled = true;
+            forgotBtn.innerHTML = `<i class="fa-solid fa-spinner animate-spin ml-1"></i> جاري التحديث...`;
+
+            const userKey = sanitizeUserName(fullName);
+            const userRef = db.ref('users/' + userKey);
+
+            try {
+                const snapshot = await userRef.once('value');
+                if (snapshot.exists() && snapshot.val().password) {
+                    await userRef.update({ password: newPass });
+                    alert('تم تغيير كلمة المرور بنجاح!');
+                    document.getElementById('forgotForm').reset();
+                    switchAuthView('login');
+                    document.getElementById('loginNameInput').value = fullName;
+                } else {
+                    err.innerText = "هذا الحساب غير موجود!";
+                    err.classList.remove('hidden');
+                }
+            } catch (error) {
+                err.innerText = "خطأ في التحديث!";
+                err.classList.remove('hidden');
+            } finally {
+                forgotBtn.disabled = false;
+                forgotBtn.innerHTML = "تحديث كلمة المرور";
+            }
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const name = document.getElementById('loginNameInput').value.trim();
+            const pass = document.getElementById('passInput').value.trim();
+            const err = document.getElementById('loginError');
+            const loginBtn = document.getElementById('loginBtn');
+
+            err.classList.add('hidden');
+            loginBtn.disabled = true;
+            loginBtn.innerHTML = `<i class="fa-solid fa-spinner animate-spin ml-1"></i> جاري التحقق...`;
+
+            const userKey = sanitizeUserName(name);
+            const userRef = db.ref('users/' + userKey);
+
+            try {
+                const snapshot = await userRef.once('value');
+
+                if (snapshot.exists() && snapshot.val().password === pass) {
+                    localStorage.setItem('km_authenticated', 'true');
+                    localStorage.setItem('km_current_user', name);
+                    
+                    document.getElementById('authModal').classList.add('hidden');
+                    document.getElementById('appContent').classList.remove('hidden');
+                    document.getElementById('headerUserName').innerText = name;
+                    
+                    listenToUserSnippets();
+                } else if (!snapshot.exists()) {
+                    err.innerText = "الحساب غير موجود!";
+                    err.classList.remove('hidden');
+                } else {
+                    err.innerText = "كلمة المرور غير صحيحة!";
+                    err.classList.remove('hidden');
+                }
+            } catch (error) {
+                err.innerText = "خطأ في الاتصال بالسحابة!";
+                err.classList.remove('hidden');
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.innerHTML = "تسجيل الدخول للخزنة السحابية";
+            }
+        }
+
+        function logout() {
+            localStorage.clear();
+            location.reload();
+        }
+
+        function listenToUserSnippets() {
+            if (isListening) return;
+            const user = getCurrentUser();
+            if (!user) return;
+            
+            isListening = true;
+            const userKey = sanitizeUserName(user);
+            
+            db.ref('snippets/' + userKey).on('value', (snapshot) => {
+                const data = snapshot.val();
+                currentSnippetsList = data ? Object.keys(data).map(id => ({ id, ...data[id] })) : [];
+                renderSnippets();
+            });
+        }
+
+        async function saveSnippet(e) {
+            e.preventDefault();
+            const title = document.getElementById('title').value.trim();
+            const language = document.getElementById('language').value;
+            const code = document.getElementById('codeText').value;
+            const user = getCurrentUser();
+
+            if (!user) return;
+
+            const userKey = sanitizeUserName(user);
+            const newSnippetRef = db.ref('snippets/' + userKey).push();
+
+            try {
+                await newSnippetRef.set({
+                    title: title,
+                    language: language,
+                    code: code,
+                    image: attachedImageData,
+                    createdAt: new Date().toISOString()
+                });
+                
+                document.getElementById('snippetForm').reset();
+                document.getElementById('attachedImagePreview').classList.add('hidden');
+                attachedImageData = null;
+                toggleForm();
+            } catch (err) {
+                alert('فشل حفظ الكود: ' + err.message);
+            }
+        }
+
+        function copyCodeById(id, btnElement) {
+            const item = currentSnippetsList.find(s => s.id === id);
+            if (!item) return;
+
+            navigator.clipboard.writeText(item.code).then(() => {
+                const originalHtml = btnElement.innerHTML;
+                btnElement.innerHTML = `<i class="fa-solid fa-check text-emerald-400"></i> تم النسخ`;
+                setTimeout(() => {
+                    btnElement.innerHTML = originalHtml;
+                }, 2000);
+            });
+        }
+
+        function askDeleteSnippet(id) {
+            snippetToDeleteId = id;
+            document.getElementById('deleteModal').classList.remove('hidden');
+        }
+
+        function closeDeleteModal() {
+            snippetToDeleteId = null;
+            document.getElementById('deleteModal').classList.add('hidden');
+        }
+
+        async function confirmDeleteAction() {
+            if (!snippetToDeleteId) return;
+            const user = getCurrentUser();
+            if (!user) return;
+
+            const userKey = sanitizeUserName(user);
+            const btn = document.getElementById('confirmDeleteBtn');
+            btn.disabled = true;
+            btn.innerText = "جاري الحذف...";
+
+            try {
+                await db.ref(`snippets/${userKey}/${snippetToDeleteId}`).remove();
+                closeDeleteModal();
+            } catch (err) {
+                alert('فشل حذف الكود: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "نعم، احذف";
+            }
+        }
+
+        function toggleForm() {
+            document.getElementById('codeForm').classList.toggle('hidden');
+        }
+
+        function renderSnippets(force = false) {
+            const grid = document.getElementById('snippetsGrid');
+            if (!grid) return;
+            const search = document.getElementById('searchInput').value.toLowerCase();
+
+            const filtered = currentSnippetsList.filter(s => (s.title && s.title.toLowerCase().includes(search)) || (s.code && s.code.toLowerCase().includes(search)));
+
+            const currentRenderState = JSON.stringify(filtered);
+            if (!force && currentRenderState === previousRenderState) return;
+            previousRenderState = currentRenderState;
+
+            if (filtered.length === 0) {
+                grid.innerHTML = `<div class="col-span-full text-center py-12 text-slate-500 glass rounded-2xl border border-slate-800"><p class="text-xs">لا توجد أكواد محفوظة هنا</p></div>`;
+                return;
+            }
+
+            grid.innerHTML = filtered.map(s => `
+                <div class="glass rounded-2xl p-4 border border-slate-800/80 hover:border-cyan-500/30 transition shadow-lg flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="font-bold text-sm text-cyan-400">${escapeHtml(s.title)}</h3>
+                            <span class="text-[10px] bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-700/50 font-mono text-cyan-300">${s.language || 'code'}</span>
+                        </div>
+                        ${s.image ? `<div class="mb-3"><img src="${s.image}" alt="Attached" class="w-full max-h-48 object-cover rounded-xl border border-slate-800"></div>` : ''}
+                        <pre class="text-xs text-slate-300 dir-ltr text-left overflow-x-auto p-3 rounded-xl bg-slate-950/90 border border-slate-900 max-h-44"><code>${escapeHtml(s.code)}</code></pre>
+                    </div>
+                    
+                    <div class="flex justify-end gap-2 mt-4 pt-3 border-t border-slate-800/60">
+                        <button onclick="copyCodeById('${s.id}', this)" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-cyan-500/20 text-slate-300 hover:text-cyan-400 border border-slate-800 text-[11px] font-medium transition flex items-center gap-1.5">
+                            <i class="fa-regular fa-copy"></i> نسخ
+                        </button>
+                        <button onclick="askDeleteSnippet('${s.id}')" class="px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 text-[11px] font-medium transition flex items-center gap-1.5">
+                            <i class="fa-regular fa-trash-can"></i> حذف
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function escapeHtml(text) {
+            return text ? text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : '';
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            if (localStorage.getItem('km_authenticated') === 'true' && getCurrentUser()) {
+                document.getElementById('authModal').classList.add('hidden');
+                document.getElementById('appContent').classList.remove('hidden');
+                document.getElementById('headerUserName').innerText = getCurrentUser();
+                listenToUserSnippets();
+            }
+        });
+    </script>
+</body>
+</html>
